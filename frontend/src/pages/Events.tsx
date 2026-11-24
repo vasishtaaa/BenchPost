@@ -1,0 +1,347 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Calendar, 
+  MapPin, 
+  Users, 
+  Plus, 
+  Search, 
+  CheckCircle2, 
+  Clock, 
+  AlertCircle,
+  Check,
+  X
+} from 'lucide-react';
+import { eventService } from '../services/event';
+import type { Event } from '../types/event';
+import { useAuth } from '../context/AuthContext';
+import { CreateEventModal } from '../components/CreateEventModal';
+
+const CATEGORIES = ['All', 'HACKATHON', 'WORKSHOP', 'SEMINAR', 'CULTURAL', 'CAREER'];
+
+export const Events: React.FC = () => {
+  const { user } = useAuth();
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [category, setCategory] = useState('All');
+  const [search, setSearch] = useState('');
+  const [registeredOnly, setRegisteredOnly] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState<{ id: string; text: string; error?: boolean } | null>(null);
+
+  const fetchEvents = async () => {
+    setLoading(true);
+    try {
+      const res = await eventService.getEvents({
+        category: category !== 'All' ? category : undefined,
+        search: search || undefined,
+        registered_only: registeredOnly,
+        upcoming_only: true
+      });
+      setEvents(res.items);
+    } catch {
+      // Handled silently
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [category, registeredOnly]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchEvents();
+  };
+
+  const handleRSVP = async (event: Event) => {
+    setActionLoadingId(event.id);
+    setFeedbackMsg(null);
+    try {
+      if (event.is_registered) {
+        // Cancel registration
+        const updated = await eventService.cancelRegistration(event.id);
+        setEvents((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+        setFeedbackMsg({ id: event.id, text: 'RSVP reservation cancelled.' });
+      } else {
+        // Register atomically
+        const updated = await eventService.registerForEvent(event.id);
+        setEvents((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+        setFeedbackMsg({ id: event.id, text: 'Seat successfully reserved!' });
+      }
+    } catch (err: any) {
+      setFeedbackMsg({
+        id: event.id,
+        text: err.response?.data?.detail || 'Registration failed.',
+        error: true
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const isOrganizer = user?.role === 'FACULTY' || user?.role === 'ADMIN';
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
+      {/* ========================================================= */}
+      {/* HEADER BANNER                                             */}
+      {/* ========================================================= */}
+      <header className="page-heading"><div><h1>Campus events</h1><p>Find workshops, lectures, and meetups. Reserve your place or manage your RSVPs.</p></div>
+        {isOrganizer && (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="action-primary"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Organize Event</span>
+          </button>
+        )}
+
+      </header>
+
+      {/* ========================================================= */}
+      {/* CONTROLS TOOLBAR                                          */}
+      {/* ========================================================= */}
+      <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        {/* Search */}
+        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search events by title, topic, or venue..."
+            className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 text-xs text-slate-800 placeholder-slate-400 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          />
+        </form>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Category Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategory(c)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition ${
+                  category === c
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+
+          {/* Registered Only Filter */}
+          <button
+            type="button"
+            onClick={() => setRegisteredOnly(!registeredOnly)}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 ${
+              registeredOnly
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>My RSVPs</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ========================================================= */}
+      {/* EVENTS STREAM                                             */}
+      {/* ========================================================= */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="bg-white rounded-3xl p-6 border border-slate-200 animate-pulse h-80"></div>
+          ))}
+        </div>
+      ) : events.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center max-w-md mx-auto shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+            <Calendar className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900">No events found</h3>
+          <p className="text-xs text-slate-500 mt-1 mb-4">
+            {registeredOnly
+              ? "You haven't reserved seats for any upcoming events yet."
+              : 'No upcoming campus events matching your active filter.'}
+          </p>
+          {registeredOnly && (
+            <button
+              onClick={() => setRegisteredOnly(false)}
+              className="text-xs font-bold text-emerald-600 hover:text-emerald-700"
+            >
+              Browse All Events &rarr;
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {events.map((event) => {
+            const startDate = new Date(event.start_time);
+            const month = startDate.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+            const day = startDate.getDate();
+            const timeStr = startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            const capacityPercent = Math.min(
+              100,
+              Math.round((event.current_registrations / event.max_capacity) * 100)
+            );
+            const isFull = event.is_full;
+            const actionLoading = actionLoadingId === event.id;
+            const hasFeedback = feedbackMsg && feedbackMsg.id === event.id;
+
+            return (
+              <div
+                key={event.id}
+                className={`bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden relative ${
+                  event.is_registered ? 'ring-2 ring-emerald-500/30' : ''
+                }`}
+              >
+                {/* Banner / Category Header */}
+                <div className="h-32 bg-gradient-to-r from-slate-800 to-indigo-900 relative p-4 flex items-start justify-between">
+                  {event.banner_url && (
+                    <img
+                      src={event.banner_url}
+                      alt={event.title}
+                      className="absolute inset-0 w-full h-full object-cover opacity-40"
+                    />
+                  )}
+                  <span className="relative z-10 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-[0.75rem] font-bold tracking-wider uppercase border border-white/20">
+                    {event.category}
+                  </span>
+
+                  {event.is_registered && (
+                    <span className="relative z-10 px-2.5 py-1 rounded-full bg-emerald-500 text-white text-[0.75rem] font-bold flex items-center gap-1 shadow-xs">
+                      <Check className="w-3 h-3" />
+                      <span>RSVP Confirmed</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Content body */}
+                <div className="p-5 flex-1 flex flex-col">
+                  <div className="flex items-start gap-3.5 mb-3">
+                    {/* Date Block */}
+                    <div className="w-12 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 flex flex-col items-center justify-center font-bold shrink-0">
+                      <span className="text-[0.75rem] uppercase leading-none">{month}</span>
+                      <span className="text-lg leading-tight mt-0.5">{day}</span>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">
+                        {event.title}
+                      </h3>
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{timeStr}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed mb-4">
+                    {event.description}
+                  </p>
+
+                  <div className="mt-auto space-y-3 pt-3 border-t border-slate-100">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{event.venue}</span>
+                    </div>
+
+                    {/* Capacity Meter */}
+                    <div>
+                      <div className="flex items-center justify-between text-[0.75rem] font-semibold text-slate-600 mb-1">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3 text-slate-400" />
+                          <span>Seats Reserved</span>
+                        </span>
+                        <span className={isFull ? 'text-rose-600 font-bold' : 'text-slate-800'}>
+                          {event.current_registrations} / {event.max_capacity} ({capacityPercent}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            isFull ? 'bg-rose-500' : capacityPercent > 80 ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${capacityPercent}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Feedback alert */}
+                    {hasFeedback && (
+                      <div
+                        className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${
+                          feedbackMsg.error
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        }`}
+                      >
+                        {feedbackMsg.error ? (
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                        )}
+                        <span>{feedbackMsg.text}</span>
+                      </div>
+                    )}
+
+                    {/* RSVP Action Button */}
+                    <div className="pt-1">
+                      {event.is_registered ? (
+                        <button
+                          type="button"
+                          disabled={actionLoading}
+                          onClick={() => handleRSVP(event)}
+                          className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 text-xs font-semibold transition flex items-center justify-center gap-1.5"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>{actionLoading ? 'Updating...' : 'Cancel RSVP Reservation'}</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={isFull || !event.is_registration_open || actionLoading}
+                          onClick={() => handleRSVP(event)}
+                          className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs ${
+                            isFull
+                              ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100'
+                          }`}
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>
+                            {actionLoading
+                              ? 'Reserving...'
+                              : isFull
+                              ? 'Capacity Full'
+                              : 'Reserve Seat (RSVP)'}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal */}
+      <CreateEventModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onEventCreated={(newEvent) => setEvents([newEvent, ...events])}
+      />
+    </div>
+  );
+};
