@@ -1,7 +1,7 @@
 # Benchpost
 
 > **Campus life, together.**  
-> *A Role-Based University Student Community & Collaboration Platform* — Individual B.Tech CSE VI Semester Mini-Project (`CampusLoop`)
+> *A Role-Based University Student Community & Collaboration Platform*
 
 Benchpost is a full-stack university community platform designed to replace scattered messaging groups, emails, and physical notice boards with one centralized, role-based digital workspace for students, faculty members, and campus administrators.
 
@@ -43,11 +43,14 @@ Benchpost is a full-stack university community platform designed to replace scat
 
 ### Quality & Tooling
 - **Pytest** + **HTTPX** (39 automated backend API & RBAC integration tests)
+- **Vitest** + **React Testing Library** (frontend component & workflow tests)
 - **TypeScript (`tsc -b`)** + **Oxlint**
 
 ---
 
 ## Architecture Overview
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for full ER diagrams, RBAC specs, and concurrency guarantees.
 
 ```text
 React 19 + Vite SPA (localhost:5173)
@@ -191,9 +194,10 @@ cd backend
 ```
 Runs 39 tests across `test_health.py`, `test_auth.py`, `test_communities.py`, `test_discussions.py`, `test_polls.py`, `test_events.py`, `test_announcements.py`, `test_notifications.py`, `test_moderation.py`, and `test_admin.py` against an isolated test database.
 
-### Frontend Type-Check, Build & Lint
+### Frontend Tests, Type-Check, Build & Lint
 ```bash
 cd frontend
+npm test        # Runs Vitest + React Testing Library suite
 npm run build   # Runs tsc -b && vite build
 npm run lint    # Runs oxlint
 ```

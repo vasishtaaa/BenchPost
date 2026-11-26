@@ -62,6 +62,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Run frontend tests
+        run: npm test
+
       - name: Build production bundle
         env:
           VITE_BASE_PATH: ${{ steps.pages.outputs.base_path }}/
