@@ -55,7 +55,7 @@ function RouteFocus() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <AuthProvider>
         <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
           <a className="skip-link" href="#content">Skip to content</a>

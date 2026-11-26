@@ -209,3 +209,14 @@ See [`.env.example`](.env.example) for all supported configuration keys:
 - `REQUIRE_UNIVERSITY_DOMAIN` — Toggle strict university domain enforcement during registration (`false` in dev/demo mode).
 - `BACKEND_CORS_ORIGINS` — JSON array of allowed frontend origins.
 - `VITE_API_URL` *(frontend)* — Defaults to `http://localhost:8000/api/v1`.
+
+---
+
+## GitHub Pages Deployment
+
+The repository includes [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) to automatically run backend tests (`pytest`), build the Vite frontend with SPA fallback (`404.html`), and deploy the static bundle to **GitHub Pages** on every push to `main`.
+
+1. In your GitHub repository, open **Settings -> Pages** and ensure **Source** is set to **GitHub Actions**.
+2. *(Optional)* Under **Settings -> Secrets and variables -> Actions -> Variables**, add `VITE_API_URL` pointing to your hosted FastAPI backend (for example, `https://your-api.onrender.com/api/v1`).
+   - If left unset, the deployed Pages site defaults to `http://localhost:8000/api/v1`, so you can run the FastAPI backend locally while browsing the GitHub Pages URL (`https://vasishtaaa.github.io/BenchPost/`).
+

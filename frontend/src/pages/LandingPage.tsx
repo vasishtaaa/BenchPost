@@ -20,7 +20,7 @@ export function LandingPage() {
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
   return <div className="welcome">
     <section className="welcome-hero" aria-labelledby="welcome-title">
-      <img className="hero-photo" src="/campus-courtyard.webp" width="1536" height="1024" alt="" fetchPriority="high" />
+      <img className="hero-photo" src={`${import.meta.env.BASE_URL}campus-courtyard.webp`} width="1536" height="1024" alt="" fetchPriority="high" />
       <div className="welcome-intro">
         <h1 id="welcome-title">Campus life<br /><em>after class.</em></h1>
         <p className="welcome-summary">Meet people in your department, ask classmates a question, or find a workshop worth staying for.</p>

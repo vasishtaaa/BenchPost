@@ -38,7 +38,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdated }) => {
   };
 
   const handleShare = () => {
-    const url = `${window.location.origin}/discussions/${post.id}`;
+    const url = `${window.location.origin}${import.meta.env.BASE_URL}discussions/${post.id}`;
     navigator.clipboard.writeText(url);
     setCopyFeedback(true);
     setTimeout(() => setCopyFeedback(false), 2000);
