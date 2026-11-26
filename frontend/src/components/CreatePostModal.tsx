@@ -1,9 +1,11 @@
 import { Modal } from './Modal';
-import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import React, { useState } from 'react';
 import { X, MessageSquare, AlertCircle } from 'lucide-react';
 import { communityService } from '../services/community';
 import { discussionService } from '../services/discussion';
-import type { Community } from '../types/community';
 import type { Post } from '../types/discussion';
 
 const CATEGORIES = [
@@ -27,7 +29,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   onPostCreated,
   defaultCommunityId,
 }) => {
-  const [communities, setCommunities] = useState<Community[]>([]);
+  const { user } = useAuth();
   const [selectedCommunity, setSelectedCommunity] = useState(defaultCommunityId || '');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -35,24 +37,31 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      communityService.getCommunities({ limit: 100 })
-        .then((res) => {
-          setCommunities(res.items);
-          if (!selectedCommunity && res.items.length > 0) {
-            setSelectedCommunity(defaultCommunityId || res.items[0].id);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [isOpen, defaultCommunityId]);
+  const groups = useQuery({
+    queryKey: ['posting-communities', user?.id, user?.role],
+    enabled: isOpen && !!user,
+    staleTime: 0,
+    queryFn: async () => {
+      const params = { my_communities: user?.role !== 'ADMIN', limit: 100 };
+      const first = await communityService.getCommunities(params);
+      const items = [...first.items];
+      while (items.length < first.total) {
+        const next = await communityService.getCommunities({ ...params, skip: items.length });
+        if (!next.items.length) break;
+        items.push(...next.items);
+      }
+      return items;
+    },
+  });
+  const communities = groups.data ?? [];
+  const destination = communities.some(group => group.id === selectedCommunity)
+    ? selectedCommunity : communities.length === 1 ? communities[0].id : '';
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCommunity) {
+    if (!destination) {
       setError('Please select a community for this post.');
       return;
     }
@@ -62,7 +71,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
     try {
       const newPost = await discussionService.createPost({
-        community_id: selectedCommunity,
+        community_id: destination,
         title,
         content,
         category,
@@ -73,7 +82,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       setContent('');
       setCategory('General');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create discussion.');
+      const detail = err.response?.data?.detail;
+      setError(typeof detail === 'string' ? detail : 'Your discussion could not be posted. Check your entries and try again.');
     } finally {
       setLoading(false);
     }
@@ -88,8 +98,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               <MessageSquare className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Start an Academic Discussion</h3>
-              <p className="text-xs text-slate-500">Ask questions, share projects, or publish resources</p>
+              <h3 className="text-lg font-bold text-slate-900">Start a discussion</h3>
+              <p className="text-xs text-slate-500">Your post will appear in the community you choose.</p>
             </div>
           </div>
           <button
@@ -101,13 +111,16 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         </div>
 
         {error && (
-          <div className="flex items-center space-x-2 p-3.5 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+          <div role="alert" className="flex items-center space-x-2 p-3.5 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {groups.isPending ? <p role="status">Loading your communities…</p>
+          : groups.isError ? <div role="alert" className="feedback-box"><p>Your communities could not be loaded.</p><button onClick={() => groups.refetch()}>Try again</button></div>
+          : !communities.length ? <div className="space-y-3"><p>Join a community before starting your first discussion. For a private group, wait until your request is approved.</p><Link to="/communities" className="action-primary" onClick={onClose}>Find a community</Link></div>
+          : <form onSubmit={handleSubmit} className="space-y-4">
           {/* Community Selector */}
           <div>
             <label htmlFor="CreatePostModal-field-1" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
@@ -115,11 +128,12 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             </label>
             <div className="relative">
               <select id="CreatePostModal-field-1"
-                value={selectedCommunity}
+                value={destination}
                 onChange={(e) => setSelectedCommunity(e.target.value)}
                 required
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-sm bg-white"
               >
+                <option value="" disabled>Choose a community</option>
                 {communities.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} {c.is_private ? '(Private)' : ''}
@@ -139,7 +153,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 <button
                   key={cat}
                   type="button"
-                  onClick={() => setCategory(cat)}
+                  aria-pressed={category === cat} onClick={() => setCategory(cat)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition border ${
                     category === cat
                       ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
@@ -160,9 +174,9 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             <input id="CreatePostModal-field-2"
               type="text"
               required
-              value={title}
+              minLength={3} maxLength={255} value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Understanding Loss Convergence in Transformer Multi-Head Self Attention"
+              placeholder="Anyone interested in a study group this Friday?"
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-sm font-medium"
             />
           </div>
@@ -170,14 +184,14 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
           {/* Content */}
           <div>
             <label htmlFor="CreatePostModal-field-3" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Discussion Content / Question Details
+              What would you like to share?
             </label>
             <textarea id="CreatePostModal-field-3"
               required
               rows={6}
-              value={content}
+              minLength={5} maxLength={20000} value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Provide background context, code snippets, or specific inquiry for peers and faculty..."
+              placeholder="For example, share the time you can meet and what you want to study."
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-sm leading-relaxed"
             />
           </div>
@@ -198,7 +212,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               {loading ? 'Publishing...' : 'Publish Discussion'}
             </button>
           </div>
-        </form>
+        </form>}
       </div>
     </Modal>
   );

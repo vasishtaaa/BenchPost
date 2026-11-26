@@ -18,7 +18,7 @@ export const Profile: React.FC = () => {
   const [fullName, setFullName] = useState(user?.profile?.full_name || '');
   const [department, setDepartment] = useState(user?.profile?.department || '');
   const [course, setCourse] = useState(user?.profile?.course || '');
-  const [academicYear, setAcademicYear] = useState<number>(user?.profile?.academic_year || 1);
+  const [academicYear, setAcademicYear] = useState(String(user?.profile?.academic_year ?? ''));
   const [bio, setBio] = useState(user?.profile?.bio || '');
   
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export const Profile: React.FC = () => {
         full_name: fullName,
         department,
         course,
-        academic_year: user?.role === 'STUDENT' ? Number(academicYear) : undefined,
+        academic_year: user?.role === 'STUDENT' && academicYear ? Number(academicYear) : undefined,
         bio,
       });
       setProfileSuccess('Profile details updated successfully!');
@@ -101,7 +101,7 @@ export const Profile: React.FC = () => {
         />
         <div className="flex-1 text-center sm:text-left">
           <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3">
-            <h1 className="text-2xl font-bold text-slate-900">{user.profile?.full_name || 'CampusLoop Member'}</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{user.profile?.full_name || 'Benchpost Member'}</h1>
             <span className={`inline-block mt-1 sm:mt-0 text-xs uppercase font-bold px-2.5 py-0.5 rounded-full border ${
               user.role === 'ADMIN' ? 'bg-purple-50 text-purple-700 border-purple-200' :
               user.role === 'FACULTY' ? 'bg-amber-50 text-amber-700 border-amber-200' :
@@ -200,13 +200,15 @@ export const Profile: React.FC = () => {
                   </label>
                   <select id="Profile-field-4"
                     value={academicYear}
-                    onChange={(e) => setAcademicYear(Number(e.target.value))}
+                    onChange={(e) => setAcademicYear(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-sm bg-white"
                   >
-                    <option value={1}>1st Year (Freshman)</option>
-                    <option value={2}>2nd Year (Sophomore)</option>
-                    <option value={3}>3rd Year (Junior)</option>
-                    <option value={4}>4th Year (Senior)</option>
+                    <option value="" disabled>Choose a year</option>
+                    <option value={1}>1st Year</option>
+                    <option value={2}>2nd Year</option>
+                    <option value={3}>3rd Year</option>
+                    <option value={4}>4th Year</option>
+                    <option value={5}>5th Year</option>
                   </select>
                 </div>
               )}

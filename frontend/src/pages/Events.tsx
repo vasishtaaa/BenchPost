@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { SearchForm } from '../components/SearchForm';
+import React, { useState } from 'react';
 import { 
   Calendar, 
   MapPin, 
   Users, 
   Plus, 
-  Search, 
+
   CheckCircle2, 
   Clock, 
   AlertCircle,
@@ -20,8 +22,8 @@ const CATEGORIES = ['All', 'HACKATHON', 'WORKSHOP', 'SEMINAR', 'CULTURAL', 'CARE
 
 export const Events: React.FC = () => {
   const { user } = useAuth();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const queryClient = useQueryClient();
   const [category, setCategory] = useState('All');
   const [search, setSearch] = useState('');
   const [registeredOnly, setRegisteredOnly] = useState(false);
@@ -29,31 +31,14 @@ export const Events: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ id: string; text: string; error?: boolean } | null>(null);
 
-  const fetchEvents = async () => {
-    setLoading(true);
-    try {
-      const res = await eventService.getEvents({
-        category: category !== 'All' ? category : undefined,
-        search: search || undefined,
-        registered_only: registeredOnly,
-        upcoming_only: true
-      });
-      setEvents(res.items);
-    } catch {
-      // Handled silently
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchEvents();
-  }, [category, registeredOnly]);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchEvents();
-  };
+  const listKey = ['events', user?.id];
+  const results = useQuery({
+    queryKey: [...listKey, category, query, registeredOnly],
+    queryFn: () => eventService.getEvents({ category, search: query || undefined, registered_only: registeredOnly, upcoming_only: true }),
+    staleTime: 0,
+  });
+  const events = results.data?.items ?? [];
+  const handleSearchSubmit = () => setQuery(search.trim());
 
   const handleRSVP = async (event: Event) => {
     setActionLoadingId(event.id);
@@ -61,13 +46,13 @@ export const Events: React.FC = () => {
     try {
       if (event.is_registered) {
         // Cancel registration
-        const updated = await eventService.cancelRegistration(event.id);
-        setEvents((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
-        setFeedbackMsg({ id: event.id, text: 'RSVP reservation cancelled.' });
+        await eventService.cancelRegistration(event.id);
+        await queryClient.invalidateQueries({ queryKey: listKey });
+        setFeedbackMsg({ id: event.id, text: 'Your reservation was cancelled.' });
       } else {
         // Register atomically
-        const updated = await eventService.registerForEvent(event.id);
-        setEvents((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+        await eventService.registerForEvent(event.id);
+        await queryClient.invalidateQueries({ queryKey: listKey });
         setFeedbackMsg({ id: event.id, text: 'Seat successfully reserved!' });
       }
     } catch (err: any) {
@@ -88,7 +73,7 @@ export const Events: React.FC = () => {
       {/* ========================================================= */}
       {/* HEADER BANNER                                             */}
       {/* ========================================================= */}
-      <header className="page-heading"><div><h1>Campus events</h1><p>Find workshops, lectures, and meetups. Reserve your place or manage your RSVPs.</p></div>
+      <header className="page-heading"><div><h1>Campus events</h1><p>Find workshops, lectures, and meetups. Choose an event to reserve a seat.</p></div>
         {isOrganizer && (
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -106,25 +91,16 @@ export const Events: React.FC = () => {
       {/* ========================================================= */}
       <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         {/* Search */}
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search events by title, topic, or venue..."
-            className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 text-xs text-slate-800 placeholder-slate-400 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          />
-        </form>
+        <SearchForm label="Search events" value={search} onChange={setSearch} onSearch={handleSearchSubmit} />
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Category Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             {CATEGORIES.map((c) => (
               <button
-                key={c}
+                key={c[0] + c.slice(1).toLowerCase()}
                 type="button"
-                onClick={() => setCategory(c)}
+                aria-pressed={category === c} onClick={() => setCategory(c)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition ${
                   category === c
                     ? 'bg-emerald-600 text-white shadow-xs'
@@ -139,7 +115,7 @@ export const Events: React.FC = () => {
           {/* Registered Only Filter */}
           <button
             type="button"
-            onClick={() => setRegisteredOnly(!registeredOnly)}
+            aria-pressed={registeredOnly} onClick={() => setRegisteredOnly(!registeredOnly)}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 ${
               registeredOnly
                 ? 'bg-indigo-600 text-white shadow-xs'
@@ -147,7 +123,7 @@ export const Events: React.FC = () => {
             }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>My RSVPs</span>
+            <span>My reservations</span>
           </button>
         </div>
       </div>
@@ -155,7 +131,7 @@ export const Events: React.FC = () => {
       {/* ========================================================= */}
       {/* EVENTS STREAM                                             */}
       {/* ========================================================= */}
-      {loading ? (
+      {results.isError ? <div className="feedback-box" role="alert"><p>We couldn’t load the events.</p><button onClick={() => results.refetch()}>Try again</button></div> : results.isPending ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((n) => (
             <div key={n} className="bg-white rounded-3xl p-6 border border-slate-200 animate-pulse h-80"></div>
@@ -172,12 +148,12 @@ export const Events: React.FC = () => {
               ? "You haven't reserved seats for any upcoming events yet."
               : 'No upcoming campus events matching your active filter.'}
           </p>
-          {registeredOnly && (
+          {(registeredOnly || query || category !== 'All') && (
             <button
-              onClick={() => setRegisteredOnly(false)}
+              onClick={() => { setRegisteredOnly(false); setQuery(''); setSearch(''); setCategory('All'); }}
               className="text-xs font-bold text-emerald-600 hover:text-emerald-700"
             >
-              Browse All Events &rarr;
+              Show all upcoming events
             </button>
           )}
         </div>
@@ -220,7 +196,7 @@ export const Events: React.FC = () => {
                   {event.is_registered && (
                     <span className="relative z-10 px-2.5 py-1 rounded-full bg-emerald-500 text-white text-[0.75rem] font-bold flex items-center gap-1 shadow-xs">
                       <Check className="w-3 h-3" />
-                      <span>RSVP Confirmed</span>
+                      <span>Seat reserved</span>
                     </span>
                   )}
                 </div>
@@ -279,7 +255,7 @@ export const Events: React.FC = () => {
                     {/* Feedback alert */}
                     {hasFeedback && (
                       <div
-                        className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${
+                        role="status" className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${
                           feedbackMsg.error
                             ? 'bg-rose-50 text-rose-700 border border-rose-200'
                             : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -304,7 +280,7 @@ export const Events: React.FC = () => {
                           className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 text-xs font-semibold transition flex items-center justify-center gap-1.5"
                         >
                           <X className="w-3.5 h-3.5" />
-                          <span>{actionLoading ? 'Updating...' : 'Cancel RSVP Reservation'}</span>
+                          <span>{actionLoading ? 'Updating...' : 'Cancel reservation'}</span>
                         </button>
                       ) : (
                         <button
@@ -322,8 +298,8 @@ export const Events: React.FC = () => {
                             {actionLoading
                               ? 'Reserving...'
                               : isFull
-                              ? 'Capacity Full'
-                              : 'Reserve Seat (RSVP)'}
+                              ? 'Event full'
+                              : !event.is_registration_open ? 'Registration closed' : 'Reserve a seat'}
                           </span>
                         </button>
                       )}
@@ -340,7 +316,7 @@ export const Events: React.FC = () => {
       <CreateEventModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onEventCreated={(newEvent) => setEvents([newEvent, ...events])}
+        onEventCreated={() => queryClient.invalidateQueries({ queryKey: listKey })}
       />
     </div>
   );

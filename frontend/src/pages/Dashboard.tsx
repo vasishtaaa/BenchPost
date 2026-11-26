@@ -1,3 +1,4 @@
+import { SearchForm } from '../components/SearchForm';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -10,7 +11,6 @@ import {
   Flame,
   Bookmark,
   Plus,
-  Search,
 
   Edit3
 } from 'lucide-react';
@@ -86,8 +86,7 @@ export const Dashboard: React.FC = () => {
       .catch(() => {});
   }, []);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = () => {
     setQuery(search.trim());
   };
 
@@ -107,6 +106,15 @@ export const Dashboard: React.FC = () => {
         </div>
         <button className="action-primary" onClick={() => setIsModalOpen(true)}><Plus size={17} /> New discussion</button>
       </header>
+      <details className="start-guide" open={localStorage.getItem('campusloop-guide-' + user?.id) !== 'closed'}
+        onToggle={event => localStorage.setItem('campusloop-guide-' + user?.id, event.currentTarget.open ? 'open' : 'closed')}>
+        <summary>Getting started on campus</summary>
+        <nav aria-label="Getting started">
+          <Link to="/communities"><strong>Join a community</strong><small>Pick a club or study group so you can post there.</small></Link>
+          <Link to="/discussions"><strong>Read a discussion</strong><small>Browse questions and save useful posts for later.</small></Link>
+          <Link to="/events"><strong>Find an event</strong><small>See what’s coming up and reserve a seat.</small></Link>
+        </nav>
+      </details>
       <div className="feed-layout grid grid-cols-12 gap-6 items-start">
         {/* ========================================== */}
         {/* COLUMN 1: LEFT NAVIGATION & CONTEXT (3 COLS)*/}
@@ -137,7 +145,7 @@ export const Dashboard: React.FC = () => {
               >
                 <div className="flex items-center gap-2.5">
                   <BookOpen className="w-4 h-4 text-slate-400" />
-                  <span>Browse Groups</span>
+                  <span>Find communities</span>
                 </div>
                 <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[0.75rem] font-bold">
                   {myCommunities.length}
@@ -155,7 +163,7 @@ export const Dashboard: React.FC = () => {
               >
                 <div className="flex items-center gap-2.5">
                   <Bookmark className="w-4 h-4 text-indigo-600" />
-                  <span>Saved Bookmarks</span>
+                  <span>Saved discussions</span>
                 </div>
                 {feedView === 'bookmarks' && <span className="w-1.5 h-4 rounded-full bg-indigo-600"></span>}
               </button>
@@ -201,7 +209,7 @@ export const Dashboard: React.FC = () => {
 
               {myCommunities.length === 0 && (
                 <p className="text-xs text-slate-400 py-2">
-                  No joined communities yet. Join departmental hubs to populate your personalized feed!
+                  Groups you join will appear here.
                 </p>
               )}
             </div>
@@ -242,16 +250,7 @@ export const Dashboard: React.FC = () => {
           {/* Feed Control Toolbar */}
           {feedView !== 'bookmarks' && <div className="flex flex-col gap-3 bg-white rounded-2xl p-3 border border-slate-200/90 shadow-sm">
             {/* Search Input */}
-            <form onSubmit={handleSearchSubmit} className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                aria-label="Search discussions" placeholder="Search discussions or questions..."
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 text-xs text-slate-800 placeholder-slate-400 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-            </form>
+            <SearchForm label="Search discussions" value={search} onChange={setSearch} onSearch={handleSearchSubmit} />
 
             <div className="flex items-center gap-2 flex-wrap justify-between">
               <div className="flex items-center gap-1.5 flex-wrap pb-1 sm:pb-0">

@@ -1,3 +1,4 @@
+import { SearchForm } from '../components/SearchForm';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -8,10 +9,7 @@ import {
    
   Bell, 
   Plus, 
-  Search, 
-   
-   
-  
+
   Edit3
 } from 'lucide-react';
 import { discussionService } from '../services/discussion';
@@ -67,8 +65,7 @@ export const Discussions: React.FC<DiscussionsProps> = ({ initialSavedOnly = fal
       .catch(() => {});
   }, []);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = () => {
     setQuery(search.trim());
   };
 
@@ -217,16 +214,7 @@ export const Discussions: React.FC<DiscussionsProps> = ({ initialSavedOnly = fal
           {!savedOnly && <>
           <div className="flex flex-col gap-3 bg-white rounded-2xl p-3 border border-slate-200/90 shadow-sm">
             {/* Search Input */}
-            <form onSubmit={handleSearchSubmit} className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                aria-label="Search discussions" placeholder="Search discussions or questions..."
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 text-xs text-slate-800 placeholder-slate-400 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-            </form>
+            <SearchForm label="Search discussions" value={search} onChange={setSearch} onSearch={handleSearchSubmit} />
 
             <div className="flex items-center gap-2 flex-wrap justify-between">
               <div className="flex items-center gap-1.5 flex-wrap pb-1 sm:pb-0">

@@ -10,5 +10,5 @@ def test_root_endpoint(client):
     response = client.get("/")
     assert response.status_code == 200
     data = response.json()
-    assert "CampusLoop API" in data["message"]
+    assert "Benchpost API" in data["message"]
     assert data["status"] == "online"

@@ -1,10 +1,10 @@
-# CampusLoop Local Development Launcher
+# Benchpost Local Development Launcher
 param(
     [string]$Service = "all"
 )
 
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "   CAMPUSLOOP LOCAL DEVELOPMENT RUNNER   " -ForegroundColor Cyan
+Write-Host "   BENCHPOST LOCAL DEVELOPMENT RUNNER   " -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
 if ($Service -eq "backend" -or $Service -eq "all") {
@@ -17,7 +17,7 @@ if ($Service -eq "frontend" -or $Service -eq "all") {
     Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd frontend; npm run dev"
 }
 
-Write-Host "`nCampusLoop is launching! Access points:" -ForegroundColor Yellow
+Write-Host "`nBenchpost is launching! Access points:" -ForegroundColor Yellow
 Write-Host "-> Frontend: http://localhost:5173" -ForegroundColor White
 Write-Host "-> Backend Swagger Docs: http://localhost:8000/api/v1/docs" -ForegroundColor White
 Write-Host "=========================================" -ForegroundColor Cyan

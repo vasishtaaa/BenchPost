@@ -47,7 +47,7 @@ function RouteFocus() {
     window.scrollTo(0, 0);
     document.getElementById('content')?.focus({ preventScroll: true });
     const section = pathname.split('/')[1];
-    document.title = section ? `${section[0].toUpperCase()}${section.slice(1)} | CampusLoop` : 'CampusLoop | Campus life, together';
+    document.title = section ? `${section[0].toUpperCase()}${section.slice(1)} | Benchpost` : 'Benchpost | Campus life, together';
   }, [pathname]);
   return null;
 }
@@ -179,7 +179,7 @@ export default function App() {
           </main>
 
           <footer className="site-footer">
-            <Link to="/">CampusLoop</Link><span>University community network</span>
+            <Link to="/">Benchpost</Link><span>University community network</span>
           </footer>
         </div>
       </AuthProvider>

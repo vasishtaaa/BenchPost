@@ -103,7 +103,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Access Restricted</h2>
           <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-            The CampusLoop Administration Console is reserved strictly for certified university administrators. Contact system administration if you believe this is an error.
+            The Benchpost Administration Console is reserved strictly for certified university administrators. Contact system administration if you believe this is an error.
           </p>
         </div>
       </div>
@@ -132,7 +132,7 @@ export const AdminDashboard: React.FC = () => {
               <div>
                 <div className="flex items-center space-x-2.5">
                   <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                    CampusLoop Admin Console
+                    Benchpost Admin Console
                   </h1>
                   <span className="px-2.5 py-0.5 rounded-full text-[0.75rem] font-bold bg-purple-100 text-purple-700 border border-purple-200 uppercase tracking-wider">
                     Super Admin

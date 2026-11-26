@@ -9,17 +9,17 @@ export const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { state } = useLocation();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const signIn = async (accountEmail: string, accountPassword: string) => {
     setError(null);
     setLoading(true);
 
     try {
-      await login({ email, password });
+      await login({ email: accountEmail.trim(), password: accountPassword });
       navigate(typeof state?.from === 'string' && /^\/(?!\/)/.test(state.from) ? state.from : '/dashboard', { replace: true });
     } catch (err: any) {
       const msg = err.response?.data?.detail || 'Failed to sign in. Please check your credentials.';
@@ -29,11 +29,6 @@ export const Login: React.FC = () => {
     }
   };
 
-  const fillDemoAccount = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setError(null);
-  };
 
   return (
     <div className="auth-shell">
@@ -51,7 +46,7 @@ export const Login: React.FC = () => {
           </div>
         )}
 
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+        <form className="mt-6 space-y-4" onSubmit={event => { event.preventDefault(); void signIn(email, password); }}>
           <div>
             <label htmlFor="email" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
               University Email
@@ -80,13 +75,14 @@ export const Login: React.FC = () => {
                 <Lock className="w-4 h-4" />
               </div>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 id="password" autoComplete="current-password" value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-sm transition"
+                className="w-full pl-10 pr-16 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-sm transition"
               />
+              <button type="button" className="password-toggle" aria-controls="password" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(!showPassword)}>{showPassword ? 'Hide' : 'Show'}</button>
             </div>
           </div>
 
@@ -106,24 +102,25 @@ export const Login: React.FC = () => {
             <ShieldCheck className="w-4 h-4 text-indigo-600" />
             <span>Try a demo account</span>
           </div>
+          <p className="mb-3 text-sm text-slate-600">Choose a role to sign in with a shared demo account. Choose Student to explore campus life.</p>
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => fillDemoAccount('student@campusloop.edu', 'Student@123456')}
+              disabled={loading} onClick={() => signIn('student@campusloop.edu', 'Student@123456')}
               className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 text-xs font-semibold text-slate-700 transition"
             >
               🎓 Student
             </button>
             <button
               type="button"
-              onClick={() => fillDemoAccount('faculty@campusloop.edu', 'Faculty@123456')}
+              disabled={loading} onClick={() => signIn('faculty@campusloop.edu', 'Faculty@123456')}
               className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-xs font-semibold text-slate-700 transition"
             >
               🏛️ Faculty
             </button>
             <button
               type="button"
-              onClick={() => fillDemoAccount('admin@campusloop.edu', 'Admin@123456')}
+              disabled={loading} onClick={() => signIn('admin@campusloop.edu', 'Admin@123456')}
               className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-purple-400 hover:bg-purple-50/50 text-xs font-semibold text-slate-700 transition"
             >
               ⚡ Admin
@@ -135,7 +132,7 @@ export const Login: React.FC = () => {
 
         <p className="text-center text-xs text-slate-600 mt-6">
           Don't have an account yet?{' '}
-          <Link to="/register" className="font-semibold text-indigo-600 hover:text-indigo-700">
+          <Link to="/register" state={state} className="font-semibold text-indigo-600 hover:text-indigo-700">
             Create an account
           </Link>
         </p>

@@ -1,9 +1,12 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
+import { SearchForm } from '../components/SearchForm';
 import { Modal } from '../components/Modal';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   BookOpen, 
-  Search, 
+
   Users, 
   Lock, 
   Globe, 
@@ -13,13 +16,14 @@ import {
   X
 } from 'lucide-react';
 import { communityService } from '../services/community';
-import type { Community } from '../types/community';
 
 const CATEGORIES = ["All", "Engineering", "Career", "Clubs & Arts", "General"];
 
 export const Communities: React.FC = () => {
-  const [communities, setCommunities] = useState<Community[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [feedback, setFeedback] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
@@ -36,38 +40,23 @@ export const Communities: React.FC = () => {
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const fetchCommunitiesList = async () => {
-    setLoading(true);
-    try {
-      const data = await communityService.getCommunities({
-        search: search || undefined,
-        category: category !== 'All' ? category : undefined,
-        my_communities: activeTab === 'my'
-      });
-      setCommunities(data.items);
-    } catch {
-      // Handled silently
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCommunitiesList();
-  }, [category, activeTab]);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchCommunitiesList();
-  };
+  const listKey = ['communities', user?.id];
+  const results = useQuery({
+    queryKey: [...listKey, category, query, activeTab],
+    queryFn: () => communityService.getCommunities({ category, search: query || undefined, my_communities: activeTab === 'my' }),
+    staleTime: 0,
+  });
+  const communities = results.data?.items ?? [];
+  const handleSearchSubmit = () => setQuery(search.trim());
 
   const handleJoin = async (communityId: string) => {
     setActionLoading(communityId);
     try {
-      await communityService.joinCommunity(communityId);
-      await fetchCommunitiesList();
+      const joined = await communityService.joinCommunity(communityId);
+      setFeedback(joined.status === 'PENDING' ? 'Request sent. A group moderator will review it.' : 'You joined the group. Open its page to start a discussion.');
+      await queryClient.invalidateQueries({ queryKey: listKey });
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to join community.');
+      setFeedback(err.response?.data?.detail || 'Failed to join community.');
     } finally {
       setActionLoading(null);
     }
@@ -78,9 +67,10 @@ export const Communities: React.FC = () => {
     setActionLoading(communityId);
     try {
       await communityService.leaveCommunity(communityId);
-      await fetchCommunitiesList();
+      setFeedback("You left the group.");
+      await queryClient.invalidateQueries({ queryKey: listKey });
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to leave community.');
+      setFeedback(err.response?.data?.detail || 'Failed to leave community.');
     } finally {
       setActionLoading(null);
     }
@@ -104,7 +94,7 @@ export const Communities: React.FC = () => {
       setDesc('');
       setRules('');
       setIsPrivate(false);
-      await fetchCommunitiesList();
+      await queryClient.invalidateQueries({ queryKey: listKey });
     } catch (err: any) {
       setModalError(err.response?.data?.detail || 'Failed to create community.');
     } finally {
@@ -130,7 +120,7 @@ export const Communities: React.FC = () => {
         {/* All vs My Communities Tabs */}
         <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200/80 w-fit">
           <button
-            onClick={() => setActiveTab('all')}
+            aria-pressed={activeTab === 'all'} onClick={() => setActiveTab('all')}
             className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
               activeTab === 'all'
                 ? 'bg-white text-indigo-700 shadow-sm'
@@ -140,7 +130,7 @@ export const Communities: React.FC = () => {
             All Communities
           </button>
           <button
-            onClick={() => setActiveTab('my')}
+            aria-pressed={activeTab === 'my'} onClick={() => setActiveTab('my')}
             className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
               activeTab === 'my'
                 ? 'bg-white text-indigo-700 shadow-sm'
@@ -152,18 +142,7 @@ export const Communities: React.FC = () => {
         </div>
 
         {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-            <Search className="w-4 h-4" />
-          </div>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search communities by name or topic..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-sm bg-white"
-          />
-        </form>
+        <SearchForm label="Search communities" value={search} onChange={setSearch} onSearch={handleSearchSubmit} />
       </div>
 
       {/* Category Pills */}
@@ -171,7 +150,7 @@ export const Communities: React.FC = () => {
         {CATEGORIES.map((c) => (
           <button
             key={c}
-            onClick={() => setCategory(c)}
+            aria-pressed={category === c} onClick={() => setCategory(c)}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border ${
               category === c
                 ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
@@ -183,8 +162,9 @@ export const Communities: React.FC = () => {
         ))}
       </div>
 
+      {feedback && <p role="status" className="feedback-box mb-4">{feedback}</p>}
       {/* Communities Grid */}
-      {loading ? (
+      {results.isError ? <div className="feedback-box" role="alert"><p>We couldn’t load the communities.</p><button onClick={() => results.refetch()}>Try again</button></div> : results.isPending ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <div key={n} className="bg-white rounded-3xl border border-slate-200 p-6 animate-pulse h-64">
@@ -207,7 +187,7 @@ export const Communities: React.FC = () => {
               : "Try adjusting your search terms or category filter to discover groups."}
           </p>
           <button
-            onClick={() => { setSearch(''); setCategory('All'); setActiveTab('all'); }}
+            onClick={() => { setSearch(''); setQuery(''); setCategory('All'); setActiveTab('all'); }}
             className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
           >
             Clear Filters

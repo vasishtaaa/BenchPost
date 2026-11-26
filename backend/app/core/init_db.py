@@ -39,7 +39,7 @@ def init_db(db: Session = None) -> None:
                 department="Computer Science & Engineering",
                 course="Administrative Board",
                 avatar_url="https://api.dicebear.com/7.x/initials/svg?seed=Admin",
-                bio="CampusLoop University System Administrator."
+                bio="Benchpost University System Administrator."
             )
             db.add(admin_profile)
 
@@ -62,7 +62,7 @@ def init_db(db: Session = None) -> None:
                 department="Computer Science & Engineering",
                 course="B.Tech Faculty Coordinator",
                 avatar_url="https://api.dicebear.com/7.x/initials/svg?seed=Rajesh",
-                bio="Associate Professor in CSE. Faculty Advisor for CampusLoop Communities."
+                bio="Associate Professor in CSE. Faculty Advisor for Benchpost Communities."
             )
             db.add(faculty_profile)
 
@@ -241,13 +241,19 @@ def init_db(db: Session = None) -> None:
                     post_id=p1.id,
                     author_id=faculty_user.id,
                     parent_id=c1.id,
-                    content="Yes Aarav, the recording and lecture slides will be shared right here on CampusLoop immediately after the session."
+                    content="Yes Aarav, the recording and lecture slides will be shared right here on Benchpost immediately after the session."
                 )
                 db.add(r_c1)
 
         if web_comm and student_user:
-            p2_title = "Open-sourcing CampusLoop: Role-Based University Student Community & Collaboration Platform!"
-            p2 = db.query(Post).filter(Post.title == p2_title).first()
+            p2_title = "Open-sourcing Benchpost: Role-Based University Student Community & Collaboration Platform!"
+            p2 = db.query(Post).filter(
+                Post.community_id == web_comm.id,
+                Post.author_id == student_user.id,
+                Post.title.in_((p2_title, p2_title.replace("Benchpost", "CampusLoop"))),
+            ).first()
+            if p2:
+                p2.title = p2_title
             if not p2:
                 p2 = Post(
                     community_id=web_comm.id,
@@ -455,7 +461,7 @@ def init_db(db: Session = None) -> None:
                 user_id=student_user.id,
                 actor_id=faculty_user.id if faculty_user else None,
                 title="Comment on your discussion",
-                message="Prof. Rajesh Sharma commented on your post 'Open-sourcing CampusLoop'",
+                message="Prof. Rajesh Sharma commented on your post 'Open-sourcing Benchpost'",
                 type="COMMENT_REPLY",
                 link="/discussions",
                 is_read=False

@@ -11,7 +11,7 @@ init_db()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="CampusLoop API: Role-Based University Student Community & Collaboration Platform",
+    description="Benchpost API: Role-Based University Student Community & Collaboration Platform",
     version="1.0.0",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url=f"{settings.API_V1_STR}/docs",
@@ -32,7 +32,7 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.get("/")
 def root():
     return {
-        "message": "Welcome to CampusLoop API",
+        "message": "Welcome to Benchpost API",
         "docs": f"{settings.API_V1_STR}/docs",
         "status": "online"
     }

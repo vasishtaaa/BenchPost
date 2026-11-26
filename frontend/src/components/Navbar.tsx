@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Bell, Bookmark, CircleUserRound, LogOut, Orbit, Menu, X } from 'lucide-react';
@@ -43,13 +43,13 @@ export function Navbar() {
   const navLinks = links.map(([to, title]) => <NavLink key={to} to={to} onClick={() => setOpenOn(null)}>{title}</NavLink>);
   const unread = data?.unread_count ?? 0;
   return <header className="masthead"><div className="masthead-inner">
-    <Link to={isAuthenticated ? '/dashboard' : '/'} className="wordmark" aria-label="CampusLoop home"><Orbit aria-hidden="true" />CampusLoop</Link>
+    <Link to={isAuthenticated ? '/dashboard' : '/'} className="wordmark" aria-label="Benchpost home"><Orbit aria-hidden="true" />Benchpost</Link>
     {isAuthenticated ? <>
       <nav className="desktop-nav" aria-label="Campus">{navLinks}</nav>
       <div className="account-tools">
         <NavLink to="/notifications" className="bell-link" aria-label={`Notifications, ${unread} unread`}><Bell size={21} />{unread > 0 && <i />}</NavLink>
         <div ref={panel} className="menu-wrap" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpenOn(null); }}>
-          <button ref={trigger} type="button" className="menu-button" aria-label="Account and navigation" aria-expanded={open} aria-controls="account-panel" onClick={() => setOpenOn(open ? null : pathname)}>{open ? <X size={20} /> : <Menu size={20} />}</button>
+          <button ref={trigger} type="button" className="menu-button" aria-label="Campus menu and account" aria-expanded={open} aria-controls="account-panel" onClick={() => setOpenOn(open ? null : pathname)}>{open ? <X size={20} /> : <Menu size={20} />}<span>Menu</span></button>
           {open && <div id="account-panel" className="account-panel">
             <strong>{user?.profile?.full_name || user?.email}</strong>
             <nav aria-label="Mobile campus navigation" className="mobile-nav">{navLinks}</nav>

@@ -90,7 +90,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               Report Submitted
             </h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed mb-6">
-              Thank you for keeping CampusLoop safe and respectful. Our community moderators and administrators have received your report and will review it promptly.
+              Thank you for keeping Benchpost safe and respectful. Our community moderators and administrators have received your report and will review it promptly.
             </p>
             <button
               onClick={handleClose}
